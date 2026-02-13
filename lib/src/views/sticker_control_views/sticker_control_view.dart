@@ -1,8 +1,8 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_story_editor/src/const/const.dart';
 import 'package:flutter_story_editor/src/controller/controller.dart';
-import 'package:flutter_story_editor/src/utils/utils.dart';
 
 import 'sticker_top_view.dart';
 
@@ -18,7 +18,6 @@ class StickerControlView extends StatefulWidget {
 
 class _StickerControlViewState extends State<StickerControlView> {
   bool isEmoji = false;
-
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -124,29 +123,13 @@ class _StickerControlViewState extends State<StickerControlView> {
                     itemCount: Consts.stickers.length,
                     itemBuilder: (context, index) {
                       final String sticker = Consts.stickers[index];
-                      String path = "assets/images/$sticker";
-                      // print("Loading sticker: assets/images/$sticker");
+
                       return GestureDetector(
                         onTap: () {
-                          widget.onStickerClickListener(path);
+                          widget.onStickerClickListener("assets/images/$sticker");
                         },
-                        child: FutureBuilder(
-                          future: loadAsset(path), // Carga de recursos de forma asíncrona
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              // Mostrar marcador de posición durante la carga
-                              return const CircularProgressIndicator();
-                            } else if (snapshot.hasError) {
-                              // Mostrar mensaje de error si la carga falla
-                              return const Icon(Icons.error);
-                            } else {
-                              // Mostrar imagen si la carga es exitosa
-                              // return Image(image: AssetImage(path, package: FlutterStoryEditor.assetPackageName ), width: 28);
-                              // return Image.asset(path, width: 28);
-                              return imageOnPackName(path);
-                            }
-                          },
-                        ),
+                        child:
+                            Image.asset("assets/images/$sticker", package: 'cumrid_story_editor'),
                       );
                     },
                   ),
@@ -163,27 +146,12 @@ class _StickerControlViewState extends State<StickerControlView> {
                     itemCount: Consts.emojies.length,
                     itemBuilder: (context, index) {
                       final String emoji = Consts.emojies[index];
-                      String path = "assets/emojies/$emoji";
-                      // print("Loading emoji: assets/emojies/$emoji");
+
                       return GestureDetector(
                         onTap: () {
-                          widget.onStickerClickListener(path);
+                          widget.onStickerClickListener("assets/emojies/$emoji");
                         },
-                        child: FutureBuilder(
-                          future: loadAsset(path), // Carga de recursos de forma asíncrona
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              // Mostrar marcador de posición durante la carga
-                              return const CircularProgressIndicator();
-                            } else if (snapshot.hasError) {
-                              // Mostrar mensaje de error si la carga falla
-                              return const Icon(Icons.error);
-                            } else {
-                              // Mostrar imagen si la carga es exitosa
-                              return imageOnPackName(path);
-                            }
-                          },
-                        ),
+                        child: Image.asset("assets/emojies/$emoji", package: 'cumrid_story_editor'),
                       );
                     },
                   ),

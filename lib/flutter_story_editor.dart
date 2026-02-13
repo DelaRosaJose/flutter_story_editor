@@ -1,21 +1,20 @@
-library flutter_story_editor;
+library;
 
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:flutter_story_editor/src/controller/controller.dart';
 import 'package:flutter_story_editor/src/utils/utils.dart';
-import 'package:flutter_story_editor/src/const/const.dart';
-import 'package:path/path.dart';
+import 'package:flutter_story_editor/src/views/main_control_views/video_view.dart';
 
 import 'src/const/filters.dart';
 import 'src/enums/story_editing_modes.dart';
 import 'src/models/stroke.dart';
 import 'src/views/main_control_views/image_view.dart';
 import 'src/views/main_control_views/main_controls_view.dart';
-import 'src/views/main_control_views/trimmer_view.dart';
 import 'src/views/paint_control_views/paint_controls_view.dart';
 import 'src/views/sticker_control_views/sticker_control_view.dart';
 import 'src/widgets/draggable_sticker_widget.dart';
@@ -37,13 +36,6 @@ class FlutterStoryEditor extends StatefulWidget {
 
   @override
   State<FlutterStoryEditor> createState() => _FlutterStoryEditorState();
-
-  static String? assetPackageName;
-
-  static initStoryEditor() async {
-    String currentPackageName = await getPackageName();
-    assetPackageName = Consts.selfPackageName == currentPackageName ? "" : Consts.selfPackageName;
-  }
 }
 
 class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
@@ -57,8 +49,8 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
   void dispose() {
     /// Cleans up resources and controllers on widget disposal.
     drawingUndoController.close();
-    widget.controller.setStoryEditingModeSelected = StoryEditingModes.none;
-    keyboardSubscription.cancel();
+    widget.controller.setStoryEditingModeSelected = StoryEditingModes.paint;
+    keyboardSubscription?.cancel();
     super.dispose();
   }
 
@@ -83,8 +75,7 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
   List<File>? uiViewEditableFiles; // Holds the editable files for UI display.
   bool isSaving = false; // Flag to indicate save operation is in progress.
   bool isKeyboardFocused = false; // Tracks the keyboard visibility state.
-  late StreamSubscription<bool>
-      keyboardSubscription; // Subscription to keyboard visibility changes.
+  StreamSubscription<bool>? keyboardSubscription; // Subscription to keyboard visibility changes.
 
   @override
   void initState() {
@@ -106,20 +97,24 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
     stickersList = ValueNotifier(List.generate(widget.selectedFiles!.length, (index) => []));
 
     // Listening to keyboard visibility
-
-    captionFocusNode.addListener(() {
-      if (captionFocusNode.hasFocus) {
-        keyboardSubscription.cancel();
-      }
-    });
-
-    var keyboardVisibilityController = KeyboardVisibilityController();
-
-    keyboardSubscription = keyboardVisibilityController.onChange.listen((bool visible) {
-      setState(() {
-        isKeyboardFocused = visible;
+    try {
+      captionFocusNode.addListener(() {
+        if (captionFocusNode.hasFocus) {
+          keyboardSubscription?.cancel();
+        }
       });
-    });
+
+      var keyboardVisibilityController = KeyboardVisibilityController();
+      keyboardSubscription = keyboardVisibilityController.onChange.listen((bool visible) {
+        if (mounted) {
+          setState(() {
+            isKeyboardFocused = visible;
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint('StoryEditor: KeyboardVisibility plugin error: $e');
+    }
   }
 
   // textList to store Text for each page.
@@ -177,81 +172,48 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
                                   int storyIndex = uiViewEditableFiles!.indexOf(singleStory);
                                   // if the selected file was video show [TrimmerView]
                                   if (isVideo(singleStory)) {
-                                    return Stack(
-                                      children: [
-                                        TrimmerView(
-                                          lines: widget.controller.uiEditableFileLines[storyIndex],
-                                          trimOnAdjust: widget.trimVideoOnAdjust,
-                                          onTrimCompleted: (file) async {
-                                            await generateThumbnail(file.path)
-                                                .then((generatedThumbnail) {
-                                              setState(() {
-                                                _thumbnails[file] = generatedThumbnail;
-                                              });
-                                            });
-                                            setState(() {
-                                              widget.selectedFiles![storyIndex] = file;
-                                            });
-                                          },
-                                          key: ValueKey(singleStory.path),
-                                          file: singleStory,
-                                          pageController: _pageController,
-                                          pageIndex: storyIndex,
-                                        ),
-                                        if (widget.controller.editingModeSelected ==
-                                            StoryEditingModes.none)
-                                          Positioned(
-                                            top: 36,
-                                            left: 22,
-                                            child: Container(
-                                              width: 32,
-                                              height: 32,
-                                              decoration: BoxDecoration(
-                                                color: Colors.transparent, // Transparent background
-                                                shape: BoxShape.circle, // Circular border
-                                                border: Border.all(
-                                                  color: Colors.white, // White border color
-                                                  width: 1.0, // Border width
-                                                ),
-                                              ),
-                                              child: IconButton(
-                                                icon: const Icon(Icons.close_sharp,
-                                                    color: Colors.white),
-                                                padding: EdgeInsets.zero,
-                                                onPressed: () {
-                                                  print(
-                                                      "Button pressed Controller: ${widget.controller}");
-                                                  // Close button logic, e.g., return to the previous page or exit editing mode
-                                                  Navigator.of(context).pop();
-                                                },
-                                              ),
-                                            ),
-                                          ),
-                                      ],
+                                    return VideoView(
+                                      file: singleStory,
+                                      controller: widget.controller,
+                                      lines: widget.controller.uiEditableFileLines[storyIndex],
+                                      textList: textList.value,
+                                      stickerList: stickersList.value,
+                                      storyIndex: storyIndex,
                                     );
+                                    // return TrimmerView(
+                                    //   lines: widget.controller
+                                    //       .uiEditableFileLines[storyIndex],
+                                    //   trimOnAdjust: widget.trimVideoOnAdjust,
+                                    //   onTrimCompleted: (file) async {
+                                    //     await generateThumbnail(file)
+                                    //         .then((generatedThumbnail) {
+                                    //       setState(() {
+                                    //         _thumbnails[file] =
+                                    //             generatedThumbnail;
+                                    //       });
+                                    //     });
+                                    //     setState(() {
+                                    //       widget.selectedFiles![storyIndex] =
+                                    //           file;
+                                    //     });
+                                    //   },
+                                    //   key: ValueKey(singleStory.path),
+                                    //   file: singleStory,
+                                    //   pageController: _pageController,
+                                    //   pageIndex: storyIndex,
+                                    // );
                                   } else {
                                     // if the selected file was image show [ImageView]
-                                    return GestureDetector(
-                                      onVerticalDragUpdate: (details) {
-                                        if (details.delta.dy < 0) {
-                                          widget.controller.setStoryEditingModeSelected =
-                                              StoryEditingModes.filters;
-                                        } else if (details.delta.dy > 0) {
-                                          widget.controller.setStoryEditingModeSelected =
-                                              StoryEditingModes.none;
-                                        }
-                                      },
-                                      child: RepaintBoundary(
-                                        key: _imageKeys[storyIndex],
-                                        child: ImageView(
-                                          storyIndex: storyIndex,
-                                          textList: textListValue,
-                                          stickerList: stickerListValue,
-                                          lines: widget.controller.uiEditableFileLines[storyIndex],
-                                          controller: widget.controller,
-                                          file: singleStory,
-                                          filter: selectedFilters[storyIndex],
-                                        ),
+                                    return RepaintBoundary(
+                                      key: _imageKeys[storyIndex],
+                                      child: ImageView(
+                                        storyIndex: storyIndex,
+                                        textList: textListValue,
+                                        stickerList: stickerListValue,
+                                        lines: widget.controller.uiEditableFileLines[storyIndex],
+                                        controller: widget.controller,
+                                        file: singleStory,
+                                        filter: selectedFilters[storyIndex],
                                       ),
                                     );
                                   }
@@ -265,7 +227,7 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
                                 widget.controller.setStoryEditingModeSelected =
                                     StoryEditingModes.none;
 
-                                await generateThumbnail(uiViewEditableFiles![currentPageIndex].path)
+                                await generateThumbnail(uiViewEditableFiles![currentPageIndex])
                                     .then((generatedThumbnail) {
                                   setState(() {
                                     _thumbnails[uiViewEditableFiles![currentPageIndex]] =

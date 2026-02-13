@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_story_editor/src/utils/matrix_gesture_detector.dart';
-import 'package:flutter_story_editor/src/utils/utils.dart';
 
 class DraggableStickerWidget extends StatefulWidget {
   final String stickerPath;
@@ -23,13 +22,13 @@ class _DraggableStickerWidgetState extends State<DraggableStickerWidget> {
       child: AnimatedBuilder(
         animation: notifier,
         builder: (BuildContext context, Widget? child) {
-          Image img = imageOnPackName(widget.stickerPath);
           return Transform(
             transform: notifier.value,
-            child: Align(alignment: Alignment.center, child: img),
+            child: Align(
+                alignment: Alignment.center,
+                child: Image.asset(widget.stickerPath, package: 'cumrid_story_editor')),
           );
         },
-
       ),
     );
   }
