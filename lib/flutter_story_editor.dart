@@ -77,6 +77,7 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
   }
 
   List<GlobalKey> _imageKeys = []; // Keys for uniquely identifying image widgets within the editor.
+  final Map<int, GlobalKey<TrimmerViewState>> _trimmerKeys = {}; // Keys for video trimmers.
   final Map<File, Uint8List?> _thumbnails = {}; // Cache for storing generated thumbnails.
   int currentPageIndex = 0; // Tracks the current page index within the story editor.
   List<List<double>> selectedFilters = []; // Stores filters applied to each story page.
@@ -217,7 +218,8 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
                                               });
                                             }
                                           },
-                                          key: ValueKey("trimmer_$storyIndex"),
+                                          key: _trimmerKeys.putIfAbsent(
+                                              storyIndex, () => GlobalKey<TrimmerViewState>()),
                                           file: singleStory,
                                           pageController: _pageController,
                                           pageIndex: storyIndex,
@@ -443,6 +445,11 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
                               onSaveClickListener: () async {
                                 if (mounted) {
                                   setState(() => isSaving = true);
+                                }
+
+                                // Trigger all video trimmers
+                                for (var key in _trimmerKeys.values) {
+                                  key.currentState?.trimVideo();
                                 }
 
                                 // Wait for all trims to finish

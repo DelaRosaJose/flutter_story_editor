@@ -47,7 +47,7 @@ class TrimmerViewState extends State<TrimmerView> with AutomaticKeepAliveClientM
   Timer? _debounce; // Timer for debouncing trim operations.
 
   // Asynchronously trims the video and updates the UI on completion.
-  Future<String?> _trimVideo() async {
+  Future<String?> trimVideo() async {
     if (mounted) {
       setState(() {
         _progressVisibility = true; // Show progress bar.
@@ -59,24 +59,40 @@ class TrimmerViewState extends State<TrimmerView> with AutomaticKeepAliveClientM
     final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
     final String videoFileName = "trim_$timestamp";
 
-    // Perform the trim operation and handle the result.
-    await _trimmer
-        .saveTrimmedVideo(
-            startValue: _startValue,
-            endValue: _endValue,
-            videoFileName: videoFileName,
-            onSave: (value) {
-              if (mounted) {
-                widget.onTrimCompleted(File(value!)); // Callback with the new file.
-              }
-            })
-        .then((value) {
+    // Validate range before saving
+    if (_endValue <= _startValue || _endValue <= 0) {
+      debugPrint("StoryEditor: Invalid trim range ignored: $_startValue to $_endValue");
       if (mounted) {
-        setState(() {
-          _progressVisibility = false; // Hide progress bar.
-        });
+        setState(() => _progressVisibility = false);
       }
-    });
+      return null;
+    }
+
+    // Perform the trim operation and handle the result.
+    try {
+      await _trimmer
+          .saveTrimmedVideo(
+              startValue: _startValue,
+              endValue: _endValue,
+              videoFileName: videoFileName,
+              onSave: (value) {
+                if (mounted) {
+                  widget.onTrimCompleted(File(value!)); // Callback with the new file.
+                }
+              })
+          .then((value) {
+        if (mounted) {
+          setState(() {
+            _progressVisibility = false; // Hide progress bar.
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint("StoryEditor: Error saving trimmed video: $e");
+      if (mounted) {
+        setState(() => _progressVisibility = false);
+      }
+    }
 
     return value;
   }
@@ -86,7 +102,7 @@ class TrimmerViewState extends State<TrimmerView> with AutomaticKeepAliveClientM
     if (_debounce?.isActive ?? false) _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
       if (mounted) {
-        _trimVideo();
+        trimVideo();
       }
     });
   }
@@ -182,18 +198,6 @@ class TrimmerViewState extends State<TrimmerView> with AutomaticKeepAliveClientM
                               backgroundColor: tealColor,
                             ),
                           ),
-                          SizedBox(
-                            width: 120,
-                            height: 38,
-                            child: ElevatedButton(
-                              onPressed: _progressVisibility
-                                  ? null
-                                  : () async {
-                                      _trimVideo();
-                                    },
-                              child: const Text("SAVE"),
-                            ),
-                          )
                         ],
                       )
                   ],
