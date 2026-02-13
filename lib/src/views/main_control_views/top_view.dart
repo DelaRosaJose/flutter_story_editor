@@ -23,7 +23,6 @@ class TopView extends StatefulWidget {
   final VoidCallback onStickersClickListener; // Callback for activating the stickers editing mode.
   final List<Stroke> lines; // List of all drawing strokes on the current page.
   final FlutterStoryEditorController controller; // Controller for managing editor state.
-
   // Constructor for initializing TopView with required parameters.
   const TopView(
       {super.key,
@@ -38,7 +37,8 @@ class TopView extends StatefulWidget {
       required this.onTextClickListener,
       required this.textList,
       required this.onStickersClickListener,
-      required this.stickerList});
+      required this.stickerList,
+      });
 
   @override
   State<TopView> createState() => _TopViewState();
@@ -137,6 +137,7 @@ class _TopViewState extends State<TopView> {
                       color: Colors.white,
                     ),
                   ),
+                  
                 ],
               ),
             ],

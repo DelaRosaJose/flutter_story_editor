@@ -25,11 +25,11 @@ class _StickerControlViewState extends State<StickerControlView> {
         BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
           child: Container(
-            color: Colors.black12.withOpacity(0.2),
+            color: Colors.black12.withValues(alpha: 0.2),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(left: 20, right: 20.0, top: 60),
+          padding: const EdgeInsets.only(left: 20, right: 20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

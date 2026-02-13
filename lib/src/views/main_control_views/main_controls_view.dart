@@ -20,6 +20,7 @@ class MainControlsView extends StatefulWidget {
   final List<File>? selectedFiles; // Optional list of media files selected for editing.
   final VoidCallback? onSaveClickListener; // Optional callback for save action.
   final TextEditingController? captionController; // Optional controller for caption text.
+
   final FlutterStoryEditorController
       controller; // Controller for managing editor states and interactions.
   final List<File> uiViewEditableFiles; // List of editable media files for the UI.
@@ -75,7 +76,7 @@ class _MainControlsViewState extends State<MainControlsView> {
   // Variables for tracking original files before modifications.
   List<File>? originalFiles;
 
-  static const double maxVideoSizeMB = 100; // Increased from 50
+  static const double maxVideoSizeMB = 1000; // Increased from 50
   static const double maxImageSizeMB = 20; // Increased from 5
 
   // Function to generate thumbnails for video files asynchronously.
