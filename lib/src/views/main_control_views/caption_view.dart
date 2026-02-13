@@ -4,7 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 // CaptionView is a StatelessWidget that provides UI for entering captions and initiating save operations.
 class CaptionView extends StatelessWidget {
-  final TextEditingController captionController; // Controller for text input.
+  final TextEditingController? captionController; // Controller for text input.
   final VoidCallback onSaveClickListener; // Callback function when the save button is clicked.
   final FocusNode? focusNode; // Optional focus node to manage focus behavior.
   final bool isSaving; // Boolean indicating whether a save operation is in progress.
@@ -12,10 +12,10 @@ class CaptionView extends StatelessWidget {
   // Constructor initializing all fields with required annotations for mandatory fields.
   const CaptionView({
     super.key,
-    required this.captionController,
+    this.captionController,
     required this.onSaveClickListener,
     required this.isSaving,
-    this.focusNode
+    this.focusNode,
   });
 
   @override
@@ -23,6 +23,7 @@ class CaptionView extends StatelessWidget {
     // Building the widget structure for the caption view.
     return Column(
       children: [
+        if (captionController != null)
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 10),
           width: double.infinity,
@@ -47,11 +48,13 @@ class CaptionView extends StatelessWidget {
                 hintStyle: TextStyle(color: Colors.white)), // Hint text style.
           ),
         ),
+        
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween, // Aligning children to the start and end of the row.
+            mainAxisAlignment: captionController != null ? MainAxisAlignment.spaceBetween : MainAxisAlignment.end, // Aligning children to the start and end of the row.
             children: [
+              if (captionController != null)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                 decoration: BoxDecoration(
@@ -65,6 +68,7 @@ class CaptionView extends StatelessWidget {
                       width: 5,
                     ),
                     Text("Status (Contacts)", style: TextStyle(color: Colors.white),) // Text indicating the status.
+                    // Text("Send to Contacts", style: TextStyle(color: Colors.white),) // Text indicating the status.
                   ],
                 ),
               ),

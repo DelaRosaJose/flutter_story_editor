@@ -1,5 +1,6 @@
 // No Filter: Identity Matrix
 import 'package:flutter/material.dart';
+import 'package:flutter_story_editor/flutter_story_editor.dart';
 
 const noFiler = [
   1.0, 0.0, 0.0, 0.0, 0.0,
@@ -62,22 +63,24 @@ final List<Color> textFilterColors = [
   Colors.brown,
 ];
 
+String? packageName = FlutterStoryEditor.assetPackageName;
+
 List<TextStyle> fontStyles = [
-  const TextStyle(fontFamily: 'Roboto', color: Colors.white),
-  const TextStyle(fontFamily: 'Merriweather', color: Colors.white),
-  const TextStyle(fontFamily: 'Madimi One', fontWeight: FontWeight.bold, color: Colors.white),
+  TextStyle(fontFamily: 'Roboto', color: Colors.white, package:packageName),
+  TextStyle(fontFamily: 'Merriweather', color: Colors.white, package:packageName),
+  TextStyle(fontFamily: 'Madimi One', fontWeight: FontWeight.bold, color: Colors.white, package:packageName),
 
   // Serif fonts (with small "tails" on letters):
-  const TextStyle(fontFamily: 'Dancing Script', color: Colors.white),
-  const TextStyle(fontFamily: 'Angkor', color: Colors.white),
-  const TextStyle(fontFamily: 'Pacifico', color: Colors.white),
+  TextStyle(fontFamily: 'Dancing Script', color: Colors.white, package:packageName),
+  TextStyle(fontFamily: 'Angkor', color: Colors.white, package:packageName),
+  TextStyle(fontFamily: 'Pacifico', color: Colors.white, package:packageName),
 
   // Sans-serif fonts (clean, without tails):
-  const TextStyle(fontFamily: 'Montserrat', color: Colors.white),
-  const TextStyle(fontFamily: 'Lato', color: Colors.white),
+  TextStyle(fontFamily: 'Montserrat', color: Colors.white, package:packageName),
+  TextStyle(fontFamily: 'Lato', color: Colors.white, package:packageName),
 
   // More stylized choices:
-  const TextStyle(fontFamily: 'Oswald', color: Colors.white),
-  const TextStyle(fontFamily: 'Raleway', color: Colors.white),
-  const TextStyle(fontFamily: 'Lora', color: Colors.white),
+  TextStyle(fontFamily: 'Oswald', color: Colors.white, package:packageName),
+  TextStyle(fontFamily: 'Raleway', color: Colors.white, package:packageName),
+  TextStyle(fontFamily: 'Lora', color: Colors.white, package:packageName),
 ];

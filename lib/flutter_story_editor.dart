@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:flutter_story_editor/src/controller/controller.dart';
 import 'package:flutter_story_editor/src/utils/utils.dart';
+import 'package:flutter_story_editor/src/const/const.dart';
+import 'package:path/path.dart';
 
 import 'src/const/filters.dart';
 import 'src/enums/story_editing_modes.dart';
@@ -19,7 +21,6 @@ import 'src/views/sticker_control_views/sticker_control_view.dart';
 import 'src/widgets/draggable_sticker_widget.dart';
 import 'src/widgets/draggable_text_widget.dart';
 
-
 class FlutterStoryEditor extends StatefulWidget {
   final List<File>? selectedFiles; // Holds the files selected for editing.
   final Function(List<File>)? onSaveClickListener; // Callback when save action is triggered.
@@ -27,10 +28,22 @@ class FlutterStoryEditor extends StatefulWidget {
   final FlutterStoryEditorController controller; // Custom controller for managing editor state.
   final bool? trimVideoOnAdjust; // Flag to determine if video should be trimmed when adjusted.
   const FlutterStoryEditor(
-      {super.key, this.selectedFiles, this.onSaveClickListener, this.captionController, required this.controller, this.trimVideoOnAdjust=false});
+      {super.key,
+      this.selectedFiles,
+      this.onSaveClickListener,
+      this.captionController,
+      required this.controller,
+      this.trimVideoOnAdjust = false});
 
   @override
   State<FlutterStoryEditor> createState() => _FlutterStoryEditorState();
+
+  static String? assetPackageName;
+
+  static initStoryEditor() async {
+    String currentPackageName = await getPackageName();
+    assetPackageName = Consts.selfPackageName == currentPackageName ? "" : Consts.selfPackageName;
+  }
 }
 
 class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
@@ -40,12 +53,11 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
   // List to keep track of edit actions for undo functionality.
   List<EditAction> editActions = [];
 
-
   @override
   void dispose() {
     /// Cleans up resources and controllers on widget disposal.
     drawingUndoController.close();
-    widget.controller.setStoryEditingModeSelected = StoryEditingModes.paint;
+    widget.controller.setStoryEditingModeSelected = StoryEditingModes.none;
     keyboardSubscription.cancel();
     super.dispose();
   }
@@ -71,15 +83,16 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
   List<File>? uiViewEditableFiles; // Holds the editable files for UI display.
   bool isSaving = false; // Flag to indicate save operation is in progress.
   bool isKeyboardFocused = false; // Tracks the keyboard visibility state.
-  late StreamSubscription<bool> keyboardSubscription; // Subscription to keyboard visibility changes.
-
+  late StreamSubscription<bool>
+      keyboardSubscription; // Subscription to keyboard visibility changes.
 
   @override
   void initState() {
     super.initState();
     // Initializes and sets up necessary controllers and listeners.
 
-    drawingUndoController.stream.listen((_) => undo(widget.controller.uiEditableFileLines[currentPageIndex]));
+    drawingUndoController.stream
+        .listen((_) => undo(widget.controller.uiEditableFileLines[currentPageIndex]));
 
     uiViewEditableFiles = List<File>.from(widget.selectedFiles!);
 
@@ -110,9 +123,11 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
   }
 
   // textList to store Text for each page.
-  ValueNotifier<List<List<DraggableTextWidget>>> textList = ValueNotifier<List<List<DraggableTextWidget>>>([]);
+  ValueNotifier<List<List<DraggableTextWidget>>> textList =
+      ValueNotifier<List<List<DraggableTextWidget>>>([]);
   // stickersList to store Stickers for each page.
-  ValueNotifier<List<List<DraggableStickerWidget>>> stickersList = ValueNotifier<List<List<DraggableStickerWidget>>>([]);
+  ValueNotifier<List<List<DraggableStickerWidget>>> stickersList =
+      ValueNotifier<List<List<DraggableStickerWidget>>>([]);
 
   final PageController _pageController = PageController();
 
@@ -147,7 +162,9 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
                           SizedBox(
                               width: double.infinity,
                               child: PageView(
-                                physics: isKeyboardFocused || widget.controller.editingModeSelected != StoryEditingModes.none
+                                physics: isKeyboardFocused ||
+                                        widget.controller.editingModeSelected !=
+                                            StoryEditingModes.none
                                     ? const NeverScrollableScrollPhysics()
                                     : const ScrollPhysics(),
                                 controller: _pageController,
@@ -160,33 +177,68 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
                                   int storyIndex = uiViewEditableFiles!.indexOf(singleStory);
                                   // if the selected file was video show [TrimmerView]
                                   if (isVideo(singleStory)) {
-                                    return TrimmerView(
-                                      lines: widget.controller.uiEditableFileLines[storyIndex],
-                                      trimOnAdjust: widget.trimVideoOnAdjust,
-                                      onTrimCompleted: (file) async {
-                                        await generateThumbnail(file)
-                                            .then((generatedThumbnail) {
-                                          setState(() {
-                                            _thumbnails[file] = generatedThumbnail;
-                                          });
-                                        });
-                                        setState(() {
-                                          widget.selectedFiles![storyIndex] = file;
-                                        });
-                                      },
-                                      key: ValueKey(singleStory.path),
-                                      file: singleStory,
-                                      pageController: _pageController,
-                                      pageIndex: storyIndex,
+                                    return Stack(
+                                      children: [
+                                        TrimmerView(
+                                          lines: widget.controller.uiEditableFileLines[storyIndex],
+                                          trimOnAdjust: widget.trimVideoOnAdjust,
+                                          onTrimCompleted: (file) async {
+                                            await generateThumbnail(file.path)
+                                                .then((generatedThumbnail) {
+                                              setState(() {
+                                                _thumbnails[file] = generatedThumbnail;
+                                              });
+                                            });
+                                            setState(() {
+                                              widget.selectedFiles![storyIndex] = file;
+                                            });
+                                          },
+                                          key: ValueKey(singleStory.path),
+                                          file: singleStory,
+                                          pageController: _pageController,
+                                          pageIndex: storyIndex,
+                                        ),
+                                        if (widget.controller.editingModeSelected ==
+                                            StoryEditingModes.none)
+                                          Positioned(
+                                            top: 36,
+                                            left: 22,
+                                            child: Container(
+                                              width: 32,
+                                              height: 32,
+                                              decoration: BoxDecoration(
+                                                color: Colors.transparent, // Transparent background
+                                                shape: BoxShape.circle, // Circular border
+                                                border: Border.all(
+                                                  color: Colors.white, // White border color
+                                                  width: 1.0, // Border width
+                                                ),
+                                              ),
+                                              child: IconButton(
+                                                icon: const Icon(Icons.close_sharp,
+                                                    color: Colors.white),
+                                                padding: EdgeInsets.zero,
+                                                onPressed: () {
+                                                  print(
+                                                      "Button pressed Controller: ${widget.controller}");
+                                                  // Close button logic, e.g., return to the previous page or exit editing mode
+                                                  Navigator.of(context).pop();
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                      ],
                                     );
                                   } else {
                                     // if the selected file was image show [ImageView]
                                     return GestureDetector(
                                       onVerticalDragUpdate: (details) {
                                         if (details.delta.dy < 0) {
-                                          widget.controller.setStoryEditingModeSelected = StoryEditingModes.filters;
+                                          widget.controller.setStoryEditingModeSelected =
+                                              StoryEditingModes.filters;
                                         } else if (details.delta.dy > 0) {
-                                          widget.controller.setStoryEditingModeSelected = StoryEditingModes.none;
+                                          widget.controller.setStoryEditingModeSelected =
+                                              StoryEditingModes.none;
                                         }
                                       },
                                       child: RepaintBoundary(
@@ -210,11 +262,14 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
                           if (mode == StoryEditingModes.paint)
                             PaintControlsView(
                               onDoneClickListener: () async {
-                                widget.controller.setStoryEditingModeSelected = StoryEditingModes.none;
+                                widget.controller.setStoryEditingModeSelected =
+                                    StoryEditingModes.none;
 
-                                await generateThumbnail(uiViewEditableFiles![currentPageIndex]).then((generatedThumbnail) {
+                                await generateThumbnail(uiViewEditableFiles![currentPageIndex].path)
+                                    .then((generatedThumbnail) {
                                   setState(() {
-                                    _thumbnails[uiViewEditableFiles![currentPageIndex]] = generatedThumbnail;
+                                    _thumbnails[uiViewEditableFiles![currentPageIndex]] =
+                                        generatedThumbnail;
                                   });
                                 });
                               },
@@ -223,27 +278,31 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
                                 onUndoClick();
 
                                 setState(() {
-                                  if (widget.controller.uiEditableFileLines[currentPageIndex].isNotEmpty) {
+                                  if (widget.controller.uiEditableFileLines[currentPageIndex]
+                                      .isNotEmpty) {
                                     widget.controller.uiEditableFileLines[currentPageIndex] =
-                                    List.from(widget.controller.uiEditableFileLines[currentPageIndex])..removeLast();
-                                    widget.controller.setUiEditableFileLines(
-                                        currentPageIndex, widget.controller.uiEditableFileLines[currentPageIndex]);
+                                        List.from(
+                                            widget.controller.uiEditableFileLines[currentPageIndex])
+                                          ..removeLast();
+                                    widget.controller.setUiEditableFileLines(currentPageIndex,
+                                        widget.controller.uiEditableFileLines[currentPageIndex]);
                                   }
                                 });
                               },
-                              uiEditableFileLines: widget.controller.uiEditableFileLines[currentPageIndex],
+                              uiEditableFileLines:
+                                  widget.controller.uiEditableFileLines[currentPageIndex],
                               onPointerDownUpdate: (newLine) {
                                 setState(() {
-                                  editActions.add(EditAction(item: newLine, type: 'line', pageIndex: currentPageIndex));
+                                  editActions.add(EditAction(
+                                      item: newLine, type: 'line', pageIndex: currentPageIndex));
 
                                   widget.controller.uiEditableFileLines[currentPageIndex] = [
                                     ...widget.controller.uiEditableFileLines[currentPageIndex],
                                     newLine
                                   ];
-                                  widget.controller.setUiEditableFileLines(
-                                      currentPageIndex, widget.controller.uiEditableFileLines[currentPageIndex]);
+                                  widget.controller.setUiEditableFileLines(currentPageIndex,
+                                      widget.controller.uiEditableFileLines[currentPageIndex]);
                                 });
-
                               },
                               controller: widget.controller,
                               selectedFile: widget.selectedFiles![currentPageIndex],
@@ -254,13 +313,10 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
                             StickerControlView(
                                 controller: widget.controller,
                                 onStickerClickListener: (stickerPath) {
-
-                                  widget.controller.setStoryEditingModeSelected = StoryEditingModes.none;
+                                  widget.controller.setStoryEditingModeSelected =
+                                      StoryEditingModes.none;
 
                                   setState(() {
-
-
-
                                     if (stickersList.value.length <= currentPageIndex) {
                                       stickersList.value.add([]);
                                     }
@@ -274,136 +330,148 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
                                       draggableSticker,
                                     );
 
-                                    editActions.add(EditAction(item: draggableSticker, type: 'sticker', pageIndex: currentPageIndex));
-
+                                    editActions.add(EditAction(
+                                        item: draggableSticker,
+                                        type: 'sticker',
+                                        pageIndex: currentPageIndex));
                                   });
-
-                                }
-                            )
+                                })
 
                           // If selected mode was TEXT show text control views,
                           // Here I returned Container() because these controls are
                           // handled within DraggableStickerWidget
 
                           else if (mode == StoryEditingModes.text)
-                              Container()
+                            Container()
 
-                              // If selected mode was NONE show main control views
-                            else
-                              MainControlsView(
-                                stickerList: stickerListValue,
-                                onStickersClickListener: () {
-                                  widget.controller.setStoryEditingModeSelected = StoryEditingModes.stickers;
-                                },
-                                captionFocusNode: captionFocusNode,
-                                textList: textListValue,
-                                isFocused: isKeyboardFocused,
-                                lines: widget.controller.uiEditableFileLines[currentPageIndex],
-                                onTextClickListener: () {
-                                  widget.controller.setStoryEditingModeSelected = StoryEditingModes.text;
+                          // If selected mode was NONE show main control views
+                          else
+                            MainControlsView(
+                              stickerList: stickerListValue,
+                              onStickersClickListener: () {
+                                widget.controller.setStoryEditingModeSelected =
+                                    StoryEditingModes.stickers;
+                              },
+                              captionFocusNode: captionFocusNode,
+                              textList: textListValue,
+                              isFocused: isKeyboardFocused,
+                              lines: widget.controller.uiEditableFileLines[currentPageIndex],
+                              onTextClickListener: () {
+                                widget.controller.setStoryEditingModeSelected =
+                                    StoryEditingModes.text;
 
+                                setState(() {
+                                  if (textList.value.length <= currentPageIndex) {
+                                    textList.value.add([]);
+                                  }
+
+                                  final draggableText = DraggableTextWidget(
+                                    controller: widget.controller,
+                                    textList: textList.value[currentPageIndex],
+                                    key: UniqueKey(),
+                                  );
+
+                                  textList.value[currentPageIndex].add(draggableText);
+
+                                  editActions.add(EditAction(
+                                      item: draggableText,
+                                      type: 'text',
+                                      pageIndex: currentPageIndex));
+                                });
+                              },
+                              onPaintClickListener: () {
+                                widget.controller.setFileSelected =
+                                    widget.selectedFiles![currentPageIndex];
+                                widget.controller.setFilterSelected =
+                                    selectedFilters[currentPageIndex];
+
+                                widget.controller.setStoryEditingModeSelected =
+                                    StoryEditingModes.paint;
+                              },
+                              currentPageIndex: currentPageIndex,
+                              pageController: _pageController,
+                              onUndoClickListener: () {
+                                // Handling undo action based on the item which was added last to the list
+
+                                if (editActions.isNotEmpty) {
+                                  EditAction lastAction = editActions.removeLast();
                                   setState(() {
-                                    if (textList.value.length <= currentPageIndex) {
-                                      textList.value.add([]);
+                                    switch (lastAction.type) {
+                                      case 'text':
+                                        textList.value[currentPageIndex].remove(lastAction.item);
+                                        break;
+                                      case 'sticker':
+                                        stickersList.value[currentPageIndex]
+                                            .remove(lastAction.item);
+                                        break;
+                                      case 'filter':
+                                        selectedFilters[currentPageIndex] = noFiler;
+                                        break;
+                                      case 'line':
+                                        undo(widget
+                                            .controller.uiEditableFileLines[currentPageIndex]);
+                                        onUndoClick();
+                                        widget.controller.uiEditableFileLines[currentPageIndex] =
+                                            List.from(widget
+                                                .controller.uiEditableFileLines[currentPageIndex])
+                                              ..remove(lastAction.item);
+                                        widget.controller.setUiEditableFileLines(
+                                            currentPageIndex,
+                                            widget
+                                                .controller.uiEditableFileLines[currentPageIndex]);
+
+                                        break;
                                     }
-
-                                    final draggableText  = DraggableTextWidget(
-                                      controller: widget.controller,
-                                      textList: textList.value[currentPageIndex],
-                                      key: UniqueKey(),
-                                    );
-
-                                    textList.value[currentPageIndex].add(
-                                        draggableText
-                                    );
-
-                                    editActions.add(EditAction(item: draggableText, type: 'text', pageIndex: currentPageIndex));
-
                                   });
-                                },
-                                onPaintClickListener: () {
-                                  widget.controller.setFileSelected = widget.selectedFiles![currentPageIndex];
-                                  widget.controller.setFilterSelected = selectedFilters[currentPageIndex];
+                                }
+                              },
+                              onImageCrop: (croppedImage) {
+                                setState(() {
+                                  uiViewEditableFiles![currentPageIndex] = croppedImage;
+                                });
+                              },
+                              onFilterChange: (filter) {
+                                setState(() {
+                                  editActions.add(EditAction(
+                                      item: filter, type: 'filter', pageIndex: currentPageIndex));
+                                  selectedFilters[currentPageIndex] = filter;
+                                });
+                              },
+                              selectedFilters: selectedFilters,
+                              uiViewEditableFiles: uiViewEditableFiles!,
+                              onSaveClickListener: () async {
+                                setState(() => isSaving = true);
 
-                                  widget.controller.setStoryEditingModeSelected = StoryEditingModes.paint;
-                                },
-                                currentPageIndex: currentPageIndex,
-                                pageController: _pageController,
-                                onUndoClickListener: () {
+                                for (int i = 0; i < widget.selectedFiles!.length; i++) {
+                                  if (!isVideo(widget.selectedFiles![i])) {
+                                    await _pageController.animateToPage(i,
+                                        duration: const Duration(milliseconds: 300),
+                                        curve: Curves.ease);
 
-                                  // Handling undo action based on the item which was added last to the list
+                                    // Waiting for page transition
+                                    await Future.delayed(const Duration(milliseconds: 500));
 
-                                  if (editActions.isNotEmpty) {
-                                    EditAction lastAction = editActions.removeLast();
-                                    setState(() {
-                                      switch (lastAction.type) {
-                                        case 'text':
-                                          textList.value[currentPageIndex].remove(lastAction.item);
-                                          break;
-                                        case 'sticker':
-                                          stickersList.value[currentPageIndex].remove(lastAction.item);
-                                          break;
-                                        case 'filter':
-                                          selectedFilters[currentPageIndex] = noFiler;
-                                          break;
-                                        case 'line':
-                                          undo(widget.controller.uiEditableFileLines[currentPageIndex]);
-                                          onUndoClick();
-                                          widget.controller.uiEditableFileLines[currentPageIndex] =
-                                          List.from(widget.controller.uiEditableFileLines[currentPageIndex])..remove(lastAction.item);
-                                          widget.controller.setUiEditableFileLines(
-                                              currentPageIndex, widget.controller.uiEditableFileLines[currentPageIndex]);
-
-                                          break;
-                                      }
-
-                                    });
-                                  }
-                                },
-                                onImageCrop: (croppedImage) {
-                                  setState(() {
-                                    uiViewEditableFiles![currentPageIndex] = croppedImage;
-                                  });
-                                },
-                                onFilterChange: (filter) {
-                                  setState(() {
-                                    editActions.add(EditAction(item: filter, type: 'filter', pageIndex: currentPageIndex));
-                                    selectedFilters[currentPageIndex] = filter;
-                                  });
-                                },
-                                selectedFilters: selectedFilters,
-                                uiViewEditableFiles: uiViewEditableFiles!,
-                                onSaveClickListener: () async {
-                                  setState(() => isSaving = true);
-
-                                  for (int i = 0; i < widget.selectedFiles!.length; i++) {
-                                    if (!isVideo(widget.selectedFiles![i])) {
-                                      await _pageController.animateToPage(i,
-                                          duration: const Duration(milliseconds: 300), curve: Curves.ease);
-
-                                      // Waiting for page transition
-                                      await Future.delayed(const Duration(milliseconds: 500));
-
-                                      File? snapshotFile = await convertWidgetToImage(_imageKeys[i]);
-                                      if (snapshotFile != null) {
-                                        setState(() {
-                                          widget.selectedFiles![i] = snapshotFile;
-                                        });
-                                      }
+                                    File? snapshotFile = await convertWidgetToImage(_imageKeys[i]);
+                                    if (snapshotFile != null) {
+                                      setState(() {
+                                        widget.selectedFiles![i] = snapshotFile;
+                                      });
                                     }
                                   }
+                                }
 
-                                  setState(() => isSaving = false);
+                                setState(() => isSaving = false);
 
-                                  if (widget.selectedFiles != null && widget.selectedFiles!.isNotEmpty) {
-                                    widget.onSaveClickListener!(widget.selectedFiles!);
-                                  }
-                                },
-                                selectedFiles: widget.selectedFiles,
-                                controller: widget.controller,
-                                captionController: widget.captionController,
-                                isSaving: isSaving,
-                              ),
+                                if (widget.selectedFiles != null &&
+                                    widget.selectedFiles!.isNotEmpty) {
+                                  widget.onSaveClickListener!(widget.selectedFiles!);
+                                }
+                              },
+                              selectedFiles: widget.selectedFiles,
+                              controller: widget.controller,
+                              captionController: widget.captionController,
+                              isSaving: isSaving,
+                            ),
                         ],
                       ),
                     ),
@@ -412,8 +480,7 @@ class _FlutterStoryEditorState extends State<FlutterStoryEditor> {
               );
             },
           );
-        }
-    );
+        });
   }
 }
 
@@ -425,4 +492,3 @@ class EditAction {
 
   EditAction({required this.item, required this.type, required this.pageIndex});
 }
-

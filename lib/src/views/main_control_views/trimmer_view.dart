@@ -158,14 +158,19 @@ class TrimmerViewState extends State<TrimmerView> with AutomaticKeepAliveClientM
                               backgroundColor: tealColor,
                             ),
                           ),
-                          ElevatedButton(
-                            onPressed: _progressVisibility
-                                ? null
-                                : () async {
-                              _trimVideo();
-                            },
-                            child: const Text("SAVE"),
-                          ),
+                          SizedBox(
+                            width: 120,
+                            height: 38, 
+                            child:
+                              ElevatedButton(
+                                onPressed: _progressVisibility
+                                    ? null
+                                    : () async {
+                                  _trimVideo();
+                                },
+                                child: const Text("SAVE"),
+                              ),
+                          )
                         ],
                       )
                   ],

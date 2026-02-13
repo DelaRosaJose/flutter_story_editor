@@ -79,9 +79,9 @@ class _MainControlsViewState extends State<MainControlsView> {
 
   // Function to generate thumbnails for video files asynchronously.
   void generateVideoFilesThumbnails() async {
-    for (var file in widget.selectedFiles ?? []) {
-      if (isVideo(file)) {
-        var generatedThumbnail = await generateThumbnail(file);
+    for (File? file in widget.selectedFiles ?? []) {
+      if (file != null && isVideo(file)) {
+        var generatedThumbnail = await generateThumbnail(file.path);
         if (mounted) {
           setState(() {
             _thumbnails[file] = generatedThumbnail;
@@ -176,7 +176,8 @@ class _MainControlsViewState extends State<MainControlsView> {
     return AnimatedPadding(
       duration: const Duration(milliseconds: 200),
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 30,
+        right: 20,
       ),
       child: Column(
         children: [
@@ -221,7 +222,7 @@ class _MainControlsViewState extends State<MainControlsView> {
                 CaptionView(
                   focusNode: widget.captionFocusNode,
                   isSaving: widget.isSaving,
-                  captionController: widget.captionController!,
+                  captionController: widget.captionController,
                   onSaveClickListener: widget.onSaveClickListener!,
                 )
             ],

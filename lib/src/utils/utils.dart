@@ -3,31 +3,83 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_story_editor/flutter_story_editor.dart';
 import 'package:flutter_story_editor/src/theme/style.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:get_thumbnail_video/video_thumbnail.dart';
+import 'package:get_thumbnail_video/index.dart';
+import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 /// Generates a thumbnail from a video file.
 ///
 /// [file] - The video file from which to generate the thumbnail.
 ///
 /// Returns a [Uint8List] containing the thumbnail data, or null if the file is not a video or is null.
-Future<Uint8List?> generateThumbnail(File? file) async {
-  if (file == null) return null;
-
-  Uint8List? thumbnail;
-  // Supports mp4, mov, avi formats.
-  if (file.path.endsWith('.mp4') || file.path.endsWith('.mov') || file.path.endsWith('.avi')) {
-    thumbnail = await VideoThumbnail.thumbnailData(
-      video: file.path,
-      imageFormat: ImageFormat.JPEG,
-      maxWidth: 128, // Width of the thumbnail.
-      quality: 15, // Quality of the thumbnail.
-    );
+Future<Uint8List?> generateThumbnail(String videoPath) async {
+  print(
+    "generateThumbnail videoPath: $videoPath",
+  );
+  if (videoPath.isEmpty) {
+    throw Exception("Video path is empty");
   }
 
-  return thumbnail;
+  final file = File(videoPath);
+  if (!file.existsSync()) {
+    throw Exception("Video file does not exist: $videoPath");
+  }
+
+  try {
+    final thumbnail = await VideoThumbnail.thumbnailData(
+      video: videoPath,
+      imageFormat: ImageFormat.JPEG,
+      maxHeight: 200, // Specified thumbnail height
+      quality: 30, // Specified thumbnail quality
+    );
+
+    if (thumbnail == null) {
+      final thumbnail = await VideoThumbnail.thumbnailData(
+        video: videoPath,
+        imageFormat: ImageFormat.JPEG,
+        maxHeight: 200,
+        quality: 30,
+        timeMs: 2,
+      );
+
+      if (thumbnail == null) {
+        throw Exception("Could not generate video thumbnail");
+      }
+    }
+
+    return thumbnail;
+  } catch (e) {
+    print("Error generating thumbnail: $e");
+    return null;
+  }
+}
+
+Image imageOnPackName(String path, {double? width}) {
+  String? packageName = FlutterStoryEditor.assetPackageName;
+  return Image(image: AssetImage(path, package: packageName), width: width);
+}
+
+Future<void> loadAsset(String path) async {
+  try {
+    // final data = await rootBundle.load(path);
+    print("!Asset loaded successfully: $path");
+    String? packageName = FlutterStoryEditor.assetPackageName;
+    final data = AssetImage(path, package: packageName);
+  } catch (e) {
+    print("Failed to load asset: $path, error: $e");
+  }
+}
+
+Future<String> getPackageName() async {
+  PackageInfo packageInfo = await PackageInfo.fromPlatform();
+  String packageName = packageInfo.packageName;
+  print('current package name: $packageName');
+  return packageName;
 }
 
 /// Converts a widget to an image file using its GlobalKey.
@@ -36,7 +88,8 @@ Future<Uint8List?> generateThumbnail(File? file) async {
 ///
 /// Returns a [File] containing the image data, or null if conversion fails.
 Future<File?> convertWidgetToImage(GlobalKey key) async {
-  RenderRepaintBoundary? boundary = key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+  RenderRepaintBoundary? boundary =
+      key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
 
   if (boundary != null && boundary.isRepaintBoundary) {
     ui.Image boxImage = await boundary.toImage(pixelRatio: 3.0);
@@ -80,11 +133,17 @@ Future<List<File>?> convertWidgetsToImages(List<GlobalKey> keys) async {
 Future<CroppedFile?> cropImage(BuildContext context, {required File file}) async {
   CroppedFile? croppedFile = await ImageCropper.platform.cropImage(
       sourcePath: file.path,
-      aspectRatioPresets: Platform.isAndroid
-          ? [CropAspectRatioPreset.square, CropAspectRatioPreset.ratio3x2, CropAspectRatioPreset.original, CropAspectRatioPreset.ratio4x3, CropAspectRatioPreset.ratio16x9]
-          : [CropAspectRatioPreset.original, CropAspectRatioPreset.square, CropAspectRatioPreset.ratio3x2, CropAspectRatioPreset.ratio4x3, CropAspectRatioPreset.ratio5x3, CropAspectRatioPreset.ratio5x4, CropAspectRatioPreset.ratio7x5, CropAspectRatioPreset.ratio16x9],
+      // aspectRatioPresets: Platform.isAndroid
+      // ? [CropAspectRatioPreset.square, CropAspectRatioPreset.ratio3x2, CropAspectRatioPreset.original, CropAspectRatioPreset.ratio4x3, CropAspectRatioPreset.ratio16x9]
+      // : [CropAspectRatioPreset.original, CropAspectRatioPreset.square, CropAspectRatioPreset.ratio3x2, CropAspectRatioPreset.ratio4x3, CropAspectRatioPreset.ratio5x3, CropAspectRatioPreset.ratio5x4, CropAspectRatioPreset.ratio7x5, CropAspectRatioPreset.ratio16x9],
       uiSettings: [
-        AndroidUiSettings(toolbarTitle: 'Crop Image', toolbarColor: darkGreenColor, toolbarWidgetColor: Colors.white, activeControlsWidgetColor: tealColor, initAspectRatio: CropAspectRatioPreset.original, lockAspectRatio: false),
+        AndroidUiSettings(
+            toolbarTitle: 'Crop Image',
+            toolbarColor: darkGreenColor,
+            toolbarWidgetColor: Colors.white,
+            activeControlsWidgetColor: tealColor,
+            initAspectRatio: CropAspectRatioPreset.original,
+            lockAspectRatio: false),
         IOSUiSettings(title: 'Crop Image'),
         WebUiSettings(context: context),
       ]);
